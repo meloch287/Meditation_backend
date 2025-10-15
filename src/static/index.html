@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>meditation_backend</title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; }
+        .section { margin-bottom: 20px; padding: 15px; border: 1px solid #ccc; border-radius: 5px; }
+        h2 { margin-top: 0; }
+        label { display: inline-block; width: 100px; margin-bottom: 5px; }
+        input[type="text"], input[type="number"] { margin-bottom: 10px; padding: 5px; width: 200px; }
+        button { padding: 8px 15px; margin-right: 10px; cursor: pointer; }
+        pre { background-color: #f4f4f4; padding: 10px; border: 1px solid #ddd; border-radius: 4px; white-space: pre-wrap; word-wrap: break-word; }
+    </style>
+</head>
+<body>
+    <h1>User API Test</h1>
+
+    <!-- Get All Users -->
+    <div class="section">
+        <h2>Get All Users (GET /users)</h2>
+        <button onclick="getUsers()">Get Users</button>
+        <pre id="get-users-result"></pre>
+    </div>
+
+    <!-- Create User -->
+    <div class="section">
+        <h2>Create User (POST /users)</h2>
+        <label for="create-id">User ID:</label>
+        <input type="text" id="create-id" name="id"><br>
+        <label for="create-name">Name:</label>
+        <input type="text" id="create-name" name="name"><br>
+        <button onclick="createUser()">Create User</button>
+        <pre id="create-user-result"></pre>
+    </div>
+
+    <!-- Get Single User -->
+    <div class="section">
+        <h2>Get Single User (GET /users/&lt;id&gt;)</h2>
+        <label for="get-user-id">User ID:</label>
+        <input type="text" id="get-user-id" name="user_id"><br>
+        <button onclick="getUser()">Get User</button>
+        <pre id="get-user-result"></pre>
+    </div>
+
+    <!-- Update User -->
+    <div class="section">
+        <h2>Update User (PUT /users/&lt;id&gt;)</h2>
+        <label for="update-user-id">User ID:</label>
+        <input type="text" id="update-user-id" name="user_id"><br>
+        <label for="update-name">New Name:</label>
+        <input type="text" id="update-name" name="name"><br>
+        <button onclick="updateUser()">Update User</button>
+        <pre id="update-user-result"></pre>
+    </div>
+
+    <!-- Delete User -->
+    <div class="section">
+        <h2>Delete User (DELETE /users/&lt;id&gt;)</h2>
+        <label for="delete-user-id">User ID:</label>
+        <input type="text" id="delete-user-id" name="user_id"><br>
+        <button onclick="deleteUser()">Delete User</button>
+        <pre id="delete-user-result"></pre>
+    </div>
+
+    <script>
+        const API_BASE_URL = '/api/users';
+
+        function displayResult(elementId, data) {
+            document.getElementById(elementId).textContent = JSON.stringify(data, null, 2);
+        }
+
+        function displayError(elementId, error) {
+            document.getElementById(elementId).textContent = `Error: ${error.message || error}`;
+        }
+
+        // GET /users
+        async function getUsers() {
+            try {
+                const response = await fetch(API_BASE_URL);
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const data = await response.json();
+                displayResult('get-users-result', data);
+            } catch (error) {
+                displayError('get-users-result', error);
+            }
+        }
+
+        // POST /users
+        async function createUser() {
+            const id = document.getElementById('create-id').value;
+            const name = document.getElementById('create-name').value;
+            if (!id || !name) {
+                displayError('create-user-result', 'User ID and name cannot be empty');
+                return;
+            }
+            try {
+                const response = await fetch(API_BASE_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id, name })
+                });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.detail || `HTTP error! status: ${response.status}`);
+                displayResult('create-user-result', data);
+                document.getElementById('create-id').value = '';
+                document.getElementById('create-name').value = '';
+            } catch (error) {
+                displayError('create-user-result', error);
+            }
+        }
+
+        // GET /users/<id>
+        async function getUser() {
+            const userId = document.getElementById('get-user-id').value;
+            if (!userId) {
+                displayError('get-user-result', 'User ID cannot be empty');
+                return;
+            }
+            try {
+                const response = await fetch(`${API_BASE_URL}/${userId}`);
+                if (response.status === 404) throw new Error('User not found');
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const data = await response.json();
+                displayResult('get-user-result', data);
+            } catch (error) {
+                displayError('get-user-result', error);
+            }
+        }
+
+        // PUT /users/<id>
+        async function updateUser() {
+            const userId = document.getElementById('update-user-id').value;
+            const name = document.getElementById('update-name').value;
+            if (!userId || !name) {
+                displayError('update-user-result', 'User ID and new name are required');
+                return;
+            }
+            try {
+                const response = await fetch(`${API_BASE_URL}/${userId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name })
+                });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.detail || `HTTP error! status: ${response.status}`);
+                displayResult('update-user-result', data);
+                document.getElementById('update-user-id').value = '';
+                document.getElementById('update-name').value = '';
+            } catch (error) {
+                displayError('update-user-result', error);
+            }
+        }
+
+        // DELETE /users/<id>
+        async function deleteUser() {
+            const userId = document.getElementById('delete-user-id').value;
+            if (!userId) {
+                displayError('delete-user-result', 'User ID cannot be empty');
+                return;
+            }
+            try {
+                const response = await fetch(`${API_BASE_URL}/${userId}`, { method: 'DELETE' });
+                if (response.status === 404) throw new Error('User not found');
+                if (!response.ok && response.status !== 204) throw new Error(`HTTP error! status: ${response.status}`);
+                displayResult('delete-user-result', { message: `User ID ${userId} successfully deleted` });
+                document.getElementById('delete-user-id').value = '';
+            } catch (error) {
+                displayError('delete-user-result', error);
+            }
+        }
+    </script>
+</body>
+</html>
