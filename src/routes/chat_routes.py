@@ -12,13 +12,14 @@ load_dotenv()
 router = APIRouter(tags=["chat"])
 
 # ------------------------------
-# Подключение OpenAI
+# OpenAI client через функцию
 # ------------------------------
-try:
-    from openai import OpenAI
-    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-except Exception:
-    client = None
+def get_openai_client():
+    try:
+        from openai import OpenAI
+        return OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    except Exception:
+        return None
 
 SYSTEM_PROMPT = """
 Ты — эмпатичный и спокойный ИИ-психолог.
@@ -28,7 +29,7 @@ SYSTEM_PROMPT = """
 """
 
 # ------------------------------
-# Схемы Pydantic
+# Pydantic схемы
 # ------------------------------
 class ChatRequest(BaseModel):
     user_id: str
@@ -45,7 +46,8 @@ async def chat_with_psychologist(request: ChatRequest, db: Session = Depends(get
     if not request.user_id:
         raise HTTPException(status_code=400, detail="user_id is required")
 
-    # Загружаем историю
+    client = get_openai_client()
+
     history = db.query(ChatMessage).filter(
         ChatMessage.user_id == request.user_id
     ).order_by(ChatMessage.created_at.asc()).all()
@@ -57,6 +59,7 @@ async def chat_with_psychologist(request: ChatRequest, db: Session = Depends(get
             "content": msg.content
         })
     messages.append({"role": "user", "content": request.message})
+
     now = datetime.now(timezone.utc)
     db.add(ChatMessage(
         user_id=request.user_id,
@@ -65,6 +68,7 @@ async def chat_with_psychologist(request: ChatRequest, db: Session = Depends(get
         created_at=now
     ))
     db.commit()
+
     try:
         def create_completion():
             return client.chat.completions.create(
@@ -81,7 +85,9 @@ async def chat_with_psychologist(request: ChatRequest, db: Session = Depends(get
             raise Exception("OpenAI client not initialized")
 
     except Exception:
+        # Фоллбек
         response_text = f"Это пример ответа ИИ на сообщение: '{request.message}'."
+
     db.add(ChatMessage(
         user_id=request.user_id,
         content=response_text,
@@ -103,4 +109,5 @@ def get_chat_history(user_id: str, db: Session = Depends(get_db)):
     messages = db.query(ChatMessage).filter(
         ChatMessage.user_id == user_id
     ).order_by(ChatMessage.created_at.asc()).all()
+
     return [ChatResponse(response=m.content) for m in messages]
