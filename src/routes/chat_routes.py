@@ -11,15 +11,14 @@ load_dotenv()
 
 router = APIRouter(tags=["chat"])
 
-# ------------------------------
-# OpenAI client через функцию
-# ------------------------------
+
 def get_openai_client():
     try:
         from openai import OpenAI
         return OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
     except Exception:
         return None
+
 
 SYSTEM_PROMPT = """
 Ты — эмпатичный и спокойный ИИ-психолог.
@@ -28,19 +27,16 @@ SYSTEM_PROMPT = """
 Отвечай кратко (2–5 предложений), с теплом и пониманием.
 """
 
-# ------------------------------
-# Pydantic схемы
-# ------------------------------
+
 class ChatRequest(BaseModel):
     user_id: str
     message: str
 
+
 class ChatResponse(BaseModel):
     response: str
 
-# ------------------------------
-# POST /api/chat/
-# ------------------------------
+
 @router.post("/", response_model=ChatResponse)
 async def chat_with_psychologist(request: ChatRequest, db: Session = Depends(get_db)):
     if not request.user_id:
@@ -85,7 +81,6 @@ async def chat_with_psychologist(request: ChatRequest, db: Session = Depends(get
             raise Exception("OpenAI client not initialized")
 
     except Exception:
-        # Фоллбек
         response_text = f"Это пример ответа ИИ на сообщение: '{request.message}'."
 
     db.add(ChatMessage(
@@ -98,9 +93,7 @@ async def chat_with_psychologist(request: ChatRequest, db: Session = Depends(get
 
     return ChatResponse(response=response_text)
 
-# ------------------------------
-# GET /api/chat/history
-# ------------------------------
+
 @router.get("/history", response_model=list[ChatResponse])
 def get_chat_history(user_id: str, db: Session = Depends(get_db)):
     if not user_id:

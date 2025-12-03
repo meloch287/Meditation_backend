@@ -2,12 +2,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, ConfigDict
 from typing import List, Optional
-from datetime import datetime, timezone
+from datetime import datetime
 from src.models.models import User, Meditation, ActivationCode, get_db
 
 router = APIRouter(prefix="/api/users", tags=["users"])
 
-# ---------- Pydantic схемы ----------
 
 class ActivationInfo(BaseModel):
     code: str
@@ -46,15 +45,11 @@ class UserResponse(BaseModel):
     last_played_meditation_id: Optional[int]
 
 
-# ---------- Эндпоинты ----------
-
-# GET /api/users
 @router.get("/", response_model=List[UserSchema])
 def get_users(db: Session = Depends(get_db)):
     return db.query(User).all()
 
 
-# GET /api/users/{id}
 @router.get("/{user_id}", response_model=UserResponse)
 def get_user(user_id: str, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.id == user_id).first()
@@ -70,7 +65,6 @@ def get_user(user_id: str, db: Session = Depends(get_db)):
     }
 
 
-# POST /api/users
 @router.post("/", response_model=UserSchema)
 def create_user(user: UserCreate, db: Session = Depends(get_db)):
     existing = db.query(User).filter(User.id == user.id).first()
@@ -84,7 +78,6 @@ def create_user(user: UserCreate, db: Session = Depends(get_db)):
     return new_user
 
 
-# PUT /api/users/{id}
 @router.put("/{user_id}", response_model=UserSchema)
 def update_user(user_id: str, user_update: UserUpdate, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.id == user_id).first()
@@ -97,7 +90,6 @@ def update_user(user_id: str, user_update: UserUpdate, db: Session = Depends(get
     return user
 
 
-# DELETE /api/users/{id}
 @router.delete("/{user_id}", status_code=204)
 def delete_user(user_id: str, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.id == user_id).first()
@@ -109,7 +101,6 @@ def delete_user(user_id: str, db: Session = Depends(get_db)):
     return None
 
 
-# POST /api/users/{user_id}/last_played/{meditation_id}
 @router.post("/{user_id}/last_played/{meditation_id}")
 def update_last_played(user_id: str, meditation_id: int, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.id == user_id).first()
@@ -126,7 +117,6 @@ def update_last_played(user_id: str, meditation_id: int, db: Session = Depends(g
     return {"message": "Last played meditation updated", "last_played_meditation_id": meditation_id}
 
 
-# GET /api/users/{user_id}/last_played
 @router.get("/{user_id}/last_played")
 def get_last_played(user_id: str, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.id == user_id).first()
@@ -151,10 +141,8 @@ def get_last_played(user_id: str, db: Session = Depends(get_db)):
     }
 
 
-# GET /api/users/{user_id}/subscriptions
 @router.get("/{user_id}/subscriptions", response_model=List[ActivationInfo])
 def get_user_subscriptions(user_id: str, db: Session = Depends(get_db)):
-    """Возвращает историю активаций (ActivationCode) для пользователя."""
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")

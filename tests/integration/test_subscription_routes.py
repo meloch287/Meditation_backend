@@ -6,10 +6,11 @@ import hashlib
 
 UTC = timezone.utc
 
+
 def hash_code(code: str) -> str:
     return hashlib.sha256(code.encode()).hexdigest()
 
-# ---------- Генерация кода ----------
+
 def test_gen_code(client: TestClient, db_session: Session):
     resp = client.post("/api/subscription/generate_code?duration_days=30")
     assert resp.status_code == 201
@@ -23,7 +24,7 @@ def test_gen_code(client: TestClient, db_session: Session):
     assert code_entry.duration_days == 30
     assert code_entry.is_used is False
 
-# ---------- Проверка кода ----------
+
 def test_check_valid(client: TestClient):
     resp = client.post("/api/subscription/generate_code?duration_days=60")
     raw_code = resp.json()["raw_code"]
@@ -32,12 +33,13 @@ def test_check_valid(client: TestClient):
     assert resp_check.status_code == 200
     assert resp_check.json() == {"status": "valid", "expires_in": "60 days"}
 
+
 def test_check_invalid(client: TestClient):
     resp = client.get("/api/subscription/check?code=INVALID_CODE")
     assert resp.status_code == 404
     assert resp.json() == {"detail": "Code not found"}
 
-# ---------- Использованный код ----------
+
 def test_check_used(client: TestClient, db_session: Session):
     resp = client.post("/api/subscription/generate_code?duration_days=30")
     raw_code = resp.json()["raw_code"]
@@ -52,7 +54,7 @@ def test_check_used(client: TestClient, db_session: Session):
     assert resp_check.status_code == 200
     assert resp_check.json() == {"status": "used", "expires_in": None}
 
-# ---------- Активация нового пользователя ----------
+
 def test_activate_new(client: TestClient, db_session: Session):
     resp = client.post("/api/subscription/generate_code?duration_days=30")
     raw_code = resp.json()["raw_code"]
@@ -75,10 +77,10 @@ def test_activate_new(client: TestClient, db_session: Session):
     assert code_entry.is_used is True
     assert code_entry.user_id == user_id
 
-# ---------- Продление премиум ----------
+
 def test_extend_premium(client: TestClient, db_session: Session):
     user_id = "premium_user"
-    user = User(id=user_id, name="Premium User", is_premium=True, premium_expires_at=datetime.now(UTC)+timedelta(days=10))
+    user = User(id=user_id, name="Premium User", is_premium=True, premium_expires_at=datetime.now(UTC) + timedelta(days=10))
     db_session.add(user)
     db_session.commit()
     initial_exp = user.premium_expires_at
@@ -90,7 +92,7 @@ def test_extend_premium(client: TestClient, db_session: Session):
     user = db_session.query(User).filter_by(id=user_id).first()
     assert user.premium_expires_at.replace(tzinfo=UTC) >= initial_exp.replace(tzinfo=UTC) + timedelta(days=30) - timedelta(seconds=1)
 
-# ---------- Активация несуществующего кода ----------
+
 def test_activate_invalid(client: TestClient, db_session: Session):
     user_id = "invalid_user"
     user = User(id=user_id, name="Test User")
@@ -101,7 +103,7 @@ def test_activate_invalid(client: TestClient, db_session: Session):
     assert resp.status_code == 404
     assert resp.json() == {"detail": "Code not found"}
 
-# ---------- Использованный код дважды ----------
+
 def test_activate_used(client: TestClient, db_session: Session):
     resp = client.post("/api/subscription/generate_code?duration_days=30")
     raw_code = resp.json()["raw_code"]
@@ -116,7 +118,7 @@ def test_activate_used(client: TestClient, db_session: Session):
     assert resp2.status_code == 400
     assert resp2.json() == {"detail": "Code already used"}
 
-# ---------- История активаций ----------
+
 def test_subscription_history_success(client: TestClient, db_session: Session):
     user_id = "history_user"
     user = User(id=user_id, name="History User")
@@ -138,10 +140,12 @@ def test_subscription_history_success(client: TestClient, db_session: Session):
         assert "activated_at" in entry
         assert "duration_days" in entry
 
+
 def test_subscription_history_user_not_found(client: TestClient):
     resp = client.get("/api/subscription/history?user_id=nonexistent_user")
     assert resp.status_code == 404
     assert resp.json() == {"detail": "User not found"}
+
 
 def test_subscription_history_empty(client: TestClient, db_session: Session):
     user_id = "empty_history_user"

@@ -9,18 +9,21 @@ from typing import List, Optional
 
 router = APIRouter()
 
-# ---------- Pydantic ----------
+
 class ActivationCodeCheckResponse(BaseModel):
     status: str
     expires_in: Optional[str] = None
+
 
 class ActivationCodeActivateRequest(BaseModel):
     code: str
     user_id: str
 
+
 class ActivationCodeActivateResponse(BaseModel):
     status: str
     until: Optional[datetime] = None
+
 
 class ActivationCodeHistoryResponse(BaseModel):
     code: str
@@ -28,11 +31,11 @@ class ActivationCodeHistoryResponse(BaseModel):
     duration_days: Optional[int]
     is_used: bool
 
-# ---------- Helper ----------
+
 def hash_code(code: str) -> str:
     return hashlib.sha256(code.encode()).hexdigest()
 
-# ---------- GET /check ----------
+
 @router.get("/check", response_model=ActivationCodeCheckResponse)
 def check_activation_code(code: str, db: Session = Depends(get_db)):
     hashed = hash_code(code)
@@ -43,7 +46,7 @@ def check_activation_code(code: str, db: Session = Depends(get_db)):
         return {"status": "used"}
     return {"status": "valid", "expires_in": f"{entry.duration_days} days"}
 
-# ---------- POST /activate ----------
+
 @router.post("/activate", response_model=ActivationCodeActivateResponse)
 def activate_subscription(request: ActivationCodeActivateRequest, db: Session = Depends(get_db)):
     hashed = hash_code(request.code)
@@ -67,7 +70,6 @@ def activate_subscription(request: ActivationCodeActivateRequest, db: Session = 
     if current_exp < now_utc:
         current_exp = now_utc
 
-    # Активируем код
     entry.is_used = True
     entry.activated_at = now_utc
     entry.user_id = user.id
@@ -81,7 +83,7 @@ def activate_subscription(request: ActivationCodeActivateRequest, db: Session = 
 
     return {"status": "activated", "until": user.premium_expires_at}
 
-# ---------- POST /generate_code ----------
+
 @router.post("/generate_code", status_code=status.HTTP_201_CREATED, response_model=dict)
 def generate_activation_code(duration_days: int = 30, db: Session = Depends(get_db)):
     raw_code = str(uuid.uuid4())
@@ -92,7 +94,7 @@ def generate_activation_code(duration_days: int = 30, db: Session = Depends(get_
     db.refresh(new_code)
     return {"raw_code": raw_code, "hashed_code": hashed, "duration_days": duration_days}
 
-# ---------- GET /history ----------
+
 @router.get("/history", response_model=List[ActivationCodeHistoryResponse])
 def get_subscription_history(user_id: str, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.id == user_id).first()

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime, timezone
@@ -6,6 +6,7 @@ from src.models.models import Meditation, User, get_db
 from pydantic import BaseModel, ConfigDict
 
 router = APIRouter()
+
 
 class MeditationSchema(BaseModel):
     id: int
@@ -19,7 +20,7 @@ class MeditationSchema(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
-# ---------- POST /seed ----------
+
 @router.post("/seed", status_code=201)
 def seed_meditations(db: Session = Depends(get_db)):
     if db.query(Meditation).count() > 0:
@@ -39,7 +40,7 @@ def seed_meditations(db: Session = Depends(get_db)):
     db.commit()
     return {"message": "Meditation data seeded successfully"}
 
-# ---------- GET / ----------
+
 @router.get("/", response_model=List[MeditationSchema])
 def get_meditations(user_id: Optional[str] = None, category: Optional[str] = None, db: Session = Depends(get_db)):
     query = db.query(Meditation)
@@ -69,7 +70,7 @@ def get_meditations(user_id: Optional[str] = None, category: Optional[str] = Non
 
     return result
 
-# ---------- GET /{id} ----------
+
 @router.get("/{meditation_id}", response_model=MeditationSchema)
 def get_meditation(meditation_id: int, user_id: Optional[str] = None, db: Session = Depends(get_db)):
     meditation = db.query(Meditation).filter(Meditation.id == meditation_id).first()

@@ -1,17 +1,15 @@
-import pytest
 from fastapi.testclient import TestClient
 from unittest.mock import MagicMock, patch
 from src.main import app
 
 client = TestClient(app)
 
-# Мок OpenAI
 mock_openai_client = MagicMock()
 mock_choice = MagicMock()
 mock_choice.message.content = "Я понимаю ваши чувства, всё будет хорошо."
 mock_openai_client.chat.completions.create.return_value.choices = [mock_choice]
 
-# Патчим get_openai_client, чтобы вернуть мок
+
 @patch("src.routes.chat_routes.get_openai_client", return_value=mock_openai_client)
 def test_chat_mock_response(mock_client_func):
     payload = {"user_id": "test_user", "message": "Мне тревожно."}
@@ -20,6 +18,7 @@ def test_chat_mock_response(mock_client_func):
     assert response.status_code == 200
     data = response.json()
     assert data["response"] == "Я понимаю ваши чувства, всё будет хорошо."
+
 
 @patch("src.routes.chat_routes.get_openai_client", return_value=mock_openai_client)
 def test_chat_history_returns_messages(mock_client_func):

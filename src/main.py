@@ -10,14 +10,15 @@ from src.routes import user_routes, meditation_routes, subscription_routes, chat
 
 load_dotenv()
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     create_db_tables()
     yield
 
+
 app = FastAPI(lifespan=lifespan)
 
-# Static
 app.mount("/static", StaticFiles(directory="src/static"), name="static")
 
 app.include_router(user_routes.router)
@@ -25,14 +26,16 @@ app.include_router(meditation_routes.router, prefix="/api/meditations", tags=["m
 app.include_router(subscription_routes.router, prefix="/api/subscription", tags=["subscription"])
 app.include_router(chat_routes.router, prefix="/api/chat", tags=["chat"])
 
-# Pages
+
 @app.get("/", include_in_schema=False)
 async def read_index():
     return FileResponse("src/static/index.html")
 
+
 @app.get("/test-chat", include_in_schema=False)
 async def read_test_chat():
     return FileResponse("src/static/test_chat.html")
+
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)

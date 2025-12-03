@@ -10,9 +10,6 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
 
-# ----------------------
-# Пользователи
-# ----------------------
 class User(Base):
     __tablename__ = "users"
 
@@ -20,16 +17,12 @@ class User(Base):
     name = Column(String, default="User")
     is_premium = Column(Boolean, default=False)
     premium_expires_at = Column(DateTime(timezone=True), nullable=True)
-
-    # ✅ Новое поле для хранения последней проигранной медитации
     last_played_meditation_id = Column(Integer, ForeignKey("meditations.id"), nullable=True)
 
-    # ✅ Связи
     activation_codes = relationship("ActivationCode", back_populates="user", cascade="all, delete-orphan")
     last_played_meditation = relationship("Meditation", foreign_keys=[last_played_meditation_id])
 
     def has_active_premium(self) -> bool:
-        """Проверка активного премиум-статуса."""
         return (
             self.is_premium
             and self.premium_expires_at is not None
@@ -37,9 +30,6 @@ class User(Base):
         )
 
 
-# ----------------------
-# Медитации
-# ----------------------
 class Meditation(Base):
     __tablename__ = "meditations"
 
@@ -52,9 +42,6 @@ class Meditation(Base):
     category = Column(String, index=True)
 
 
-# ----------------------
-# Активационные коды
-# ----------------------
 class ActivationCode(Base):
     __tablename__ = "activation_codes"
 
@@ -66,26 +53,19 @@ class ActivationCode(Base):
     user_id = Column(String, ForeignKey("users.id"), nullable=True)
     expires_at = Column(DateTime(timezone=True), nullable=True)
 
-    # ✅ Связь с пользователем
     user = relationship("User", back_populates="activation_codes")
 
 
-# ----------------------
-# Сообщения чата
-# ----------------------
 class ChatMessage(Base):
     __tablename__ = "chat_messages"
 
     id = Column(String, primary_key=True, index=True, default=lambda: str(uuid.uuid4()))
     user_id = Column(String, index=True, nullable=False)
     content = Column(String, nullable=False)
-    is_user = Column(Boolean, nullable=False)  # True если пользователь, False если AI
+    is_user = Column(Boolean, nullable=False)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
 
 
-# ----------------------
-# Работа с БД
-# ----------------------
 def create_db_tables():
     Base.metadata.create_all(bind=engine)
 
@@ -96,7 +76,3 @@ def get_db():
         yield db
     finally:
         db.close()
-
-
-if __name__ == "__main__":
-    create_db_tables()
